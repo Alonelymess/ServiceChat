@@ -1,0 +1,31 @@
+{
+  "formId": "nsw-birth-registration",
+  "title": "NSW Birth Registration Form",
+  "fields": [
+    {"id": "bornInNSW", "label": "Was the child born in NSW?", "type": "radio", "options": ["yes", "no"], "required": true},
+    {"id": "relationship", "label": "What is your relationship to the child?", "type": "select", "options": ["mother", "father", "parent", "other"], "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "hasIdentityDocs", "label": "Do you have 3 forms of valid identity documents for each parent to prove their identity?", "type": "radio", "options": ["yes", "no"], "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "childFullName", "label": "Child's Full Name", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "childDOB", "label": "Child's Date of Birth", "type": "date", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "childPlace", "label": "Child's Place of Birth", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "childSex", "label": "Child's Sex", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent1FullName", "label": "Parent 1 Full Name", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent1DOB", "label": "Parent 1 Date of Birth", "type": "date", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent1Place", "label": "Parent 1 Place of Birth", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent1Address", "label": "Parent 1 Address", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent1Contact", "label": "Parent 1 Contact Details", "type": "text", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent2FullName", "label": "Parent 2 Full Name", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent2DOB", "label": "Parent 2 Date of Birth", "type": "date", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent2Place", "label": "Parent 2 Place of Birth", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent2Address", "label": "Parent 2 Address", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parent2Contact", "label": "Parent 2 Contact Details", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "maritalStatus", "label": "Marital Status of Parents", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "siblings", "label": "Other Children (Siblings)", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "aboriginal", "label": "Aboriginal or Torres Strait Islander origin", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "declaration", "label": "I confirm all information is true and correct", "type": "checkbox", "required": true, "conditional": {"bornInNSW": "yes"}},
+    {"id": "hospitalNotification", "label": "Upload Hospital Birth Notification", "type": "file", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "parentID", "label": "Upload Proof of Identity for Parents", "type": "file", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "orderCertificate", "label": "Order a birth certificate (fee applies)", "type": "checkbox", "required": false, "conditional": {"bornInNSW": "yes"}},
+    {"id": "paymentDetails", "label": "Payment Details", "type": "text", "required": false, "conditional": {"bornInNSW": "yes"}}
+  ]
+}

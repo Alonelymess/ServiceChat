@@ -1,0 +1,15 @@
+[project]
+name = "govsummary"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai>=1.31.0",
+    "pdfquery>=0.4.3",
+    "requests>=2.32.5",
+    "streamlit>=1.48.1",
+    "dotenv>=0.9.9",
+    "weaviate-client>=4.13.2",
+    "fastapi[standard]>=0.115.12",
+]
