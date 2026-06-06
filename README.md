@@ -1,19 +1,48 @@
 # ServiceChat 🏛️
 
+[![GovHack 2025](https://img.shields.io/badge/GovHack_2025-National_Runner--Up_🏆-gold)](https://govhack.org)
+[![Next.js](https://img.shields.io/badge/Next.js_15-black?logo=next.js)](https://nextjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Gemini](https://img.shields.io/badge/Gemini_2.5_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+
 > **🏆 GovHack 2025 — National Runner-Up**
 
-An AI-powered chatbot that helps NSW residents navigate government services. Instead of searching across dozens of agency websites, users describe their situation and ServiceChat guides them through the right services, forms, and next steps — with a side-by-side assistant that answers questions as they go.
+An AI-powered chatbot that helps NSW residents navigate government services. Instead of searching across dozens of agency websites, users describe their situation and ServiceChat routes them into a structured guided form — with a real-time AI assistant built into the side panel that answers questions as they go.
+
+---
+
+## Demo
+
+![ServiceChat Demo](docs/demo.gif)
+
+> **Scenario shown:** Starting a business in NSW — the app identifies required industry licences, surfaces a compliance checklist with direct links to ASIC / ATO / council registration, and answers questions about business structure in the side panel.
 
 ---
 
 ## Features
 
-- **5 life-event scenarios** — new arrival in Australia, new baby, storm damage, address change, business registration
-- **Free-text chat** — ask anything about NSW government services
-- **Form assistant** — guides users through government forms field by field, with context-aware answers and official links
-- **Gemini 2.5 Flash** with thinking mode, Google Search grounding, and URL context tools
+- **5 life-event scenarios** — each with a dedicated structured form and embedded AI assistant
+- **Streaming chat** — responses stream token-by-token via Server-Sent Events
+- **Form assistant** — context-aware AI answers based on the user's current form state
+- **AI-generated roadmap** — personalised action plan based on the conversation history
+- **Free-text chat** — ask anything about NSW government services without picking a scenario
+- **Gemini 2.5 Flash** with thinking mode, Google Search grounding, and URL Context tools
 - **Per-user, per-scenario conversation memory** with automatic history trimming
-- **Weaviate vector DB** for semantic search over service content
+
+---
+
+## Scenarios
+
+Each scenario opens a dedicated structured form with an AI chat assistant in the side panel.
+
+| Scenario | Form | Description |
+|---|---|---|
+| `new-arrival` | `NewArrivalForm` | 3-step checklist — visa info, TFN/Medicare/licence setup, local services directory |
+| `new-baby` | `BirthRegistrationForm` | Full NSW BDM birth registration form — conditional fields, identity document guidance |
+| `storm-damage` | `StormDamageForm` | 4-step incident report — property, damage types, emergency services, insurance |
+| `change-address` | `ChangeAddressForm` | Address update across 12 services — Service NSW, ATO, Medicare, electoral roll, utilities |
+| `business-registration` | `BusinessRegistrationForm` | Business structure picker, industry licence warnings, ABN/GST/TFN compliance checklist |
 
 ---
 
@@ -23,76 +52,34 @@ An AI-powered chatbot that helps NSW residents navigate government services. Ins
 |---|---|
 | Frontend | Next.js 15, TypeScript, Tailwind CSS, shadcn/ui |
 | Backend | FastAPI (Python), Uvicorn |
-| AI | Google Gemini 2.5 Flash (via `google-genai`) |
-| Vector DB | Weaviate 1.28 |
-| Infrastructure | Docker Compose |
+| AI | Google Gemini 2.5 Flash (`google-genai` SDK) |
+| Streaming | Server-Sent Events (SSE) via `StreamingResponse` |
+| Infrastructure | Docker Compose (Weaviate for future vector search) |
 
 ---
 
 ## Architecture
 
 ```
-User → Next.js frontend
-          ↓ POST /chat
-       FastAPI backend
-          ↓
-       Gemini 2.5 Flash
-       (+ Google Search + URL Context tools)
-          ↓
-       Weaviate (vector search)
+Browser (Next.js 15)
+    │
+    │  POST /chat/stream  ← SSE — tokens stream in real time
+    │  POST /chat         ← standard JSON (form side-chat)
+    │  POST /roadmap      ← AI-generated personalised action plan
+    ▼
+FastAPI backend
+    │
+    ├── utils/chat.py         per-user, per-scenario conversation history
+    ├── utils/prompt.py       scenario-specific system prompts
+    └── api/chat_api.py       SSE + JSON + roadmap endpoints
+    │
+    ▼
+Gemini 2.5 Flash
+    ├── GoogleSearch tool     → live NSW government service data
+    └── UrlContext tool       → real-time content from official URLs
 ```
 
-The backend maintains per-user, per-scenario conversation histories and passes them to Gemini on each turn, keeping the last 10 messages to stay within context limits.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+
-- Docker & Docker Compose
-
-### 1. Start Weaviate
-
-```bash
-cd backend
-docker compose up -d
-```
-
-Weaviate will be available at `http://localhost:8080`.
-
-### 2. Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-Create a `.env` file:
-
-```env
-model_key=YOUR_GOOGLE_GENAI_API_KEY
-```
-
-Run the server:
-
-```bash
-python main.py
-```
-
-Backend runs on `http://localhost:8000`.
-
-### 3. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs on `http://localhost:3000`.
+**Conversation memory:** each `(user_id, scenario)` pair maintains its own history, capped at 20 messages (oldest trimmed first, initial system prompt always preserved). History is stored server-side per session; UUID-based user IDs are generated and persisted in `localStorage` on the frontend.
 
 ---
 
@@ -102,62 +89,147 @@ Frontend runs on `http://localhost:3000`.
 ServiceChat/
 ├── backend/
 │   ├── api/
-│   │   └── chat_api.py        # POST /chat endpoint
+│   │   └── chat_api.py           # POST /chat, /chat/stream, /roadmap
 │   ├── utils/
-│   │   ├── chat.py            # Gemini chat logic, history management
-│   │   └── prompt.py          # System prompts
-│   ├── docker-compose.yml     # Weaviate setup
-│   └── main.py                # FastAPI app entry point
+│   │   ├── chat.py               # Gemini logic, streaming, history management
+│   │   └── prompt.py             # Per-scenario system prompts
+│   ├── docker-compose.yml        # Weaviate (optional)
+│   ├── main.py                   # FastAPI app, CORS, health endpoint
+│   └── requirements.txt
 └── frontend/
     ├── app/
-    │   └── page.tsx            # Home page
-    └── components/
-        ├── service-scenarios.tsx      # Scenario picker + free-text chat
-        └── conversational_chatbot.tsx # Chat UI
+    │   └── page.tsx
+    ├── components/
+    │   ├── service-scenarios.tsx          # Scenario picker + free-text entry
+    │   ├── conversational_chatbot.tsx     # Routes to form or free chat
+    │   ├── birth-registration-form.tsx    # new-baby
+    │   ├── new-arrival-form.tsx           # new-arrival
+    │   ├── change-address-form.tsx        # change-address
+    │   ├── storm-damage-form.tsx          # storm-damage
+    │   ├── business-registration-form.tsx # business-registration
+    │   ├── roadmap-view.tsx               # AI-generated roadmap
+    │   └── chat-history.tsx
+    └── lib/
+        └── api.tsx                        # streamMessageToApi, fetchRoadmap
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+
+### 1. Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Create a `.env` file (see `.env.example`):
+
+```
+model_key=YOUR_GOOGLE_GENAI_API_KEY
+```
+
+Run the server:
+
+```bash
+uvicorn main:app --reload
+```
+
+Backend runs at `http://localhost:8000`. Check `GET /health` to confirm.
+
+### 2. Frontend
+
+```bash
+cd frontend
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Frontend runs at `http://localhost:3000`.
+
+---
+
+## API Reference
+
+### `POST /chat/stream`
+Streams a response via Server-Sent Events.
+
+**Request:**
+```json
+{ "message": "How do I get a TFN?", "user_id": "abc123" }
+```
+
+**SSE events:**
+```
+data: {"token": "To "}
+data: {"token": "apply "}
+...
+data: [DONE]
+```
+
+---
+
+### `POST /chat`
+Standard JSON response. Used by the form side-chat panels where streaming isn't needed.
+
+**Request:**
+```json
+{ "message": "User question about birth registration form: ...", "user_id": "abc123" }
+```
+
+**Response:**
+```json
+{ "user_id": "abc123", "message": "..." }
+```
+
+---
+
+### `POST /roadmap`
+Generates a personalised action plan based on the user's conversation history.
+
+**Request:**
+```json
+{ "user_id": "abc123", "scenario": "new-arrival" }
+```
+
+**Response:**
+```json
+{
+  "steps": [
+    {
+      "title": "Apply for a Tax File Number",
+      "description": "Required before starting work or opening a bank account.",
+      "link": "https://www.ato.gov.au/...",
+      "priority": "high",
+      "estimatedTime": "15 min"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /health`
+```json
+{ "status": "ok", "service": "ServiceChat API" }
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `model_key` | Google Generative AI API key (Gemini) |
-
----
-
-## Scenarios
-
-| Scenario | Description |
-|---|---|
-| `new-arrival` | Essential setup for new residents in Australia |
-| `new-baby` | Newborn registration and family services |
-| `storm-damage` | Damage reporting and emergency assistance |
-| `change-address` | Update address across all government services |
-| `business-registration` | Register a business and obtain required licences |
-
----
-
-## API
-
-### `POST /chat`
-
-```json
-{
-  "message": "new-arrival\nUser: How do I get a Medicare card?",
-  "user_id": "abc123",
-  "role": "user"
-}
-```
-
-**Response:**
-
-```json
-{
-  "user_id": "abc123",
-  "message": "To get a Medicare card as a new arrival..."
-}
-```
+| Variable | Where | Description |
+|---|---|---|
+| `model_key` | `backend/.env` | Google Generative AI API key |
+| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | Backend base URL (default: `http://127.0.0.1:8000`) |
+| `ALLOWED_ORIGINS` | `backend/.env` | Comma-separated CORS origins for production |
 
 ---
 
