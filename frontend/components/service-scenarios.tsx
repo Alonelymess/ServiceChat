@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { ConversationalFlow } from "@/components/conversational-flow"
 import { ConversationalChatBot } from "./conversational_chatbot"
 
 interface ServiceScenario {
@@ -15,6 +14,7 @@ interface ServiceScenario {
   title: string
   description: string
   icon: React.ReactNode
+  estimatedTime: string
   category: "life-event" | "emergency" | "general"
   questions: string[]
 }
@@ -24,6 +24,7 @@ const scenarios: ServiceScenario[] = [
     id: "new-arrival",
     title: "I just arrived in Australia",
     description: "Get essential services set up as a new resident",
+    estimatedTime: "2–4 weeks",
     /* Updated to NSW material design icon style */
     icon: (
       <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -42,6 +43,7 @@ const scenarios: ServiceScenario[] = [
     id: "new-baby",
     title: "I just had a baby",
     description: "Register your newborn and access family services",
+    estimatedTime: "1–2 hours",
     /* Updated to NSW material design icon style */
     icon: (
       <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -60,6 +62,7 @@ const scenarios: ServiceScenario[] = [
     id: "storm-damage",
     title: "A storm damaged my property",
     description: "Report damage and access emergency assistance",
+    estimatedTime: "30–60 min",
     /* Updated to NSW material design icon style */
     icon: (
       <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -78,6 +81,7 @@ const scenarios: ServiceScenario[] = [
     id: "change-address",
     title: "I need to change my address",
     description: "Update your address across all government services",
+    estimatedTime: "1–3 hours",
     /* Updated to NSW material design icon style */
     icon: (
       <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -96,6 +100,7 @@ const scenarios: ServiceScenario[] = [
     id: "business-registration",
     title: "I want to start a business",
     description: "Register your business and get required licenses",
+    estimatedTime: "2–5 days",
     /* Updated to NSW material design icon style */
     icon: (
       <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
