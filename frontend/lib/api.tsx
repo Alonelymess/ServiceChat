@@ -1,54 +1,134 @@
-// Ensure this URL points to your /chat endpoint
-const API_URL = "https://i9awsgqvaro3.share.zrok.io/chat"
+// API URL — override via NEXT_PUBLIC_API_URL in .env.local
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"
 
-/**
- * Sends the conversation history to the chatbot API and returns the bot's response.
- * @param messages - An array of conversation messages.
- * @returns A promise that resolves to the bot's response string.
- * @throws Will throw an error if the API request fails.
- */
+// ── Standard (non-streaming) chat ─────────────────────────────────────────────
+
 export async function sendMessageToApi(
   message: string,
   scenarioId: string | null = null,
   uuid: string
-): Promise<{ nextQuestion: any; previewForm: any }> {
+): Promise<string> {
+  if (scenarioId) {
+    message = `Scenario: ${scenarioId}\nUser: ${message}`
+  }
+
+  const response = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      skip_zrok_interstitial: "true",
+    },
+    body: JSON.stringify({ message, user_id: uuid, role: "user" }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  if (!data.message) throw new Error("Invalid response: 'message' field missing")
+  return data.message
+}
+
+// ── Streaming chat ─────────────────────────────────────────────────────────────
+
+/**
+ * Stream a chat message token-by-token from the backend SSE endpoint.
+ * @param onToken  Called with each text chunk as it arrives.
+ * @param onDone   Called when the stream is complete.
+ */
+export async function streamMessageToApi(
+  message: string,
+  scenarioId: string | null = null,
+  uuid: string,
+  onToken: (token: string) => void,
+  onDone: () => void,
+  onError?: (err: Error) => void,
+): Promise<void> {
+  if (scenarioId) {
+    message = `Scenario: ${scenarioId}\nUser: ${message}`
+  }
+
+  let response: Response
   try {
-    if (scenarioId) {
-      message = `Scenario: ${scenarioId}\nUser: ${message}`
-    }
-    console.log("[v0] Sending message:", message)
-
-    const requestBody = {
-      message: message,
-      user_id: uuid, // Example user_id
-      role: "user",
-    }
-
-    console.log("[v0] Request body:", requestBody)
-
-    const response = await fetch(API_URL, {
+    response = await fetch(`${API_URL}/chat/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        skip_zrok_interstitial: "true", // <-- ADD THIS LINE
+        skip_zrok_interstitial: "true",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({ message, user_id: uuid, role: "user" }),
     })
-
-    if (!response.ok) {
-      throw new Error(`API error! Status: ${response.status}`)
-    }
-
-    const responseData = await response.json()
-    console.log("[v0] Response data:", responseData)
-    // Return the full response object (with nextQuestion, previewForm, etc)
-    if (!responseData.message) {
-      throw new Error("Invalid response from API: 'message' field is missing")
-    }
-
-    return responseData.message
-  } catch (error) {
-    console.error("Failed to communicate with the API:", error)
-    throw error
+  } catch (err) {
+    onError?.(err as Error)
+    return
   }
+
+  if (!response.ok || !response.body) {
+    onError?.(new Error(`API error: ${response.status}`))
+    return
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""   // keep the incomplete last line
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue
+        const payload = line.slice(6).trim()
+        if (payload === "[DONE]") {
+          onDone()
+          return
+        }
+        try {
+          const parsed = JSON.parse(payload)
+          if (parsed.token) onToken(parsed.token)
+          if (parsed.error) onError?.(new Error(parsed.error))
+        } catch {
+          // malformed chunk — skip
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  onDone()
+}
+
+// ── Roadmap ────────────────────────────────────────────────────────────────────
+
+export interface RoadmapStep {
+  title: string
+  description: string
+  link?: string
+  priority: "high" | "medium" | "low"
+  estimatedTime?: string
+}
+
+export async function fetchRoadmap(
+  uuid: string,
+  scenarioId: string
+): Promise<RoadmapStep[]> {
+  const response = await fetch(`${API_URL}/roadmap`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      skip_zrok_interstitial: "true",
+    },
+    body: JSON.stringify({ user_id: uuid, scenario: scenarioId }),
+  })
+
+  if (!response.ok) throw new Error(`Roadmap API error: ${response.status}`)
+  const data = await response.json()
+  return (data.steps ?? []) as RoadmapStep[]
 }
