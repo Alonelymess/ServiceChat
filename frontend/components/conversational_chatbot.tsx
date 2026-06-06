@@ -14,6 +14,10 @@ import Markdown from "react-markdown"
 import styles from "@/styles/MarkdownStyles.module.css"
 import { v4 as uuidv4 } from "uuid"
 import { BirthRegistrationForm } from "@/components/birth-registration-form"
+import { ChangeAddressForm } from "@/components/change-address-form"
+import { StormDamageForm } from "@/components/storm-damage-form"
+import { BusinessRegistrationForm } from "@/components/business-registration-form"
+import { NewArrivalForm } from "@/components/new-arrival-form"
 
 interface ServiceScenario {
   id: string
@@ -71,6 +75,18 @@ export function ConversationalChatBot({ scenario, onBack, initialMessage }: Conv
   // ── Routing: scenario-specific form components ──────────────────────────────
   if (scenario?.id === "new-baby") {
     return <BirthRegistrationForm userId={userId} />
+  }
+  if (scenario?.id === "change-address") {
+    return <ChangeAddressForm userId={userId} />
+  }
+  if (scenario?.id === "storm-damage") {
+    return <StormDamageForm userId={userId} />
+  }
+  if (scenario?.id === "business-registration") {
+    return <BusinessRegistrationForm userId={userId} />
+  }
+  if (scenario?.id === "new-arrival") {
+    return <NewArrivalForm userId={userId} />
   }
 
   // ── Streaming send ──────────────────────────────────────────────────────────
