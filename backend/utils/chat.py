@@ -114,3 +114,78 @@ def generate(user_id: str, message: str) -> str:
     _trim_history(history)
 
     return reply_text
+
+
+def generate_stream(user_id: str, message: str):
+    """
+    Generator that yields text chunks for SSE streaming.
+    Saves the full assembled reply to history once streaming completes.
+    """
+    if "User requested to clean the chat history for this scenario:" in message:
+        scenario = message.split("User requested to clean the chat history for this scenario:")[-1].strip()
+        delete_message_history(user_id, scenario)
+        yield f"Chat history cleared for scenario: {scenario}"
+        return
+
+    scenario_name, user_text = _parse_message(message)
+    if not scenario_name:
+        yield "Error: No valid scenario name found in the message."
+        return
+
+    history = _get_history(user_id, scenario_name)
+    history.append(types.Content(role="user", parts=[types.Part.from_text(text=user_text)]))
+    _trim_history(history)
+
+    client, config = _build_client_and_config()
+    full_reply = ""
+    try:
+        for chunk in client.models.generate_content_stream(
+            model="gemini-2.5-flash",
+            contents=history,
+            config=config,
+        ):
+            if chunk.text:
+                full_reply += chunk.text
+                yield chunk.text
+    except Exception as exc:
+        yield f"\n\n[Error: {exc}]"
+        return
+
+    # Save complete reply to history
+    history.append(types.Content(role="model", parts=[types.Part.from_text(text=full_reply)]))
+    _trim_history(history)
+
+
+def generate_roadmap(user_id: str, scenario_name: str) -> str:
+    """
+    Ask Gemini to generate a personalised roadmap JSON based on the existing
+    conversation history for this user+scenario.
+
+    Returns a JSON string: {"steps": [{"title", "description", "link", "priority", "estimatedTime"}, ...]}
+    """
+    history = _get_history(user_id, scenario_name)
+
+    roadmap_prompt = (
+        "Based on our conversation so far, generate a personalised step-by-step roadmap "
+        "for the user to complete all necessary government service tasks.\n\n"
+        "Return ONLY a valid JSON object with this exact shape — no markdown fences, no extra text:\n"
+        '{"steps": [\n'
+        '  {"title": "...", "description": "...", "link": "https://...", '
+        '"priority": "high|medium|low", "estimatedTime": "e.g. 15 min"}\n'
+        "]}"
+    )
+
+    roadmap_history = history + [
+        types.Content(role="user", parts=[types.Part.from_text(text=roadmap_prompt)])
+    ]
+
+    client = genai.Client(api_key=os.getenv("model_key"))
+    config = types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=1024),
+    )
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=roadmap_history,
+        config=config,
+    )
+    return response.text
