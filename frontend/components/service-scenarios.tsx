@@ -142,6 +142,11 @@ export function ServiceScenarios() {
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (chatInput.trim()) {
+      // Clear any saved general-chat history so the new question starts fresh
+      const userId = localStorage.getItem("userId")
+      if (userId) {
+        localStorage.removeItem(`chatHistory-${userId}-general`)
+      }
       handleCustomChatStart(chatInput)
     }
   }

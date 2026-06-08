@@ -141,28 +141,43 @@ export function ConversationalChatBot({ scenario, onBack, initialMessage }: Conv
 
   // ── Initialise chat ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const saved = localStorage.getItem(storageKey)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved).map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp),
-        }))
-        setMessages(parsed)
-      } catch {
-        localStorage.removeItem(storageKey)
+    const isFreeChatQuery = !scenario && !!initialMessage?.trim()
+
+    // Restore saved history only for scenario chats, not fresh free-chat queries
+    if (!isFreeChatQuery) {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved).map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          }))
+          setMessages(parsed)
+        } catch {
+          localStorage.removeItem(storageKey)
+        }
+        return
       }
-      return
     }
 
-    const greeting = initialMessage?.trim()
-      ? initialMessage.trim()
-      : scenario
-      ? `I've selected the scenario: "${scenario.title}". Please greet me and ask how you can assist.`
-      : "I am a new user. Please greet me and ask how you can help with NSW government services."
-
-    setIsLoading(true)
-    sendStreaming(greeting)
+    if (isFreeChatQuery) {
+      // Free-chat: show the user's message as a visible bubble, then get AI response
+      const userMsg: ConversationMessage = {
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: initialMessage!.trim(),
+        timestamp: new Date(),
+      }
+      setMessages([userMsg])
+      setIsLoading(true)
+      sendStreaming(initialMessage!.trim())
+    } else {
+      const greeting = scenario
+        ? `I've selected the scenario: "${scenario.title}". Please greet me and ask how you can assist.`
+        : "I am a new user. Please greet me and ask how you can help with NSW government services."
+      setIsLoading(true)
+      sendStreaming(greeting)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey])
 
